@@ -12,7 +12,7 @@ from esengine import (
 class ExampleDoc(Document):
     _index = 'esengine_test'
     _doctype = 'example'
-    _es = Elasticsearch()
+    _es = Elasticsearch(hosts=["http://localhost:9200"])
 
     name = StringField()
     age = IntegerField()
@@ -59,18 +59,18 @@ instances.append(mongo)
 ########################################################################
 
 for instance in instances:
-    print instance
+    print (instance)
 
-    print "get by id=", instance.id, ExampleDoc.get(id=instance.id)
+    print ("get by id=", instance.id, ExampleDoc.get(id=instance.id))
 
-    print "Filter by name=", instance.name, [
+    print ("Filter by name=", instance.name, [
         item.to_dict() for item in ExampleDoc.filter(name=instance.name, size=2)
-    ]
+    ])
 
-    print "Filter by name='" + instance.name + "', active=", instance.active, [
+    print ("Filter by name='" + instance.name + "', active=", instance.active, [
         item.to_dict()
         for item in ExampleDoc.filter(name="Gonzo", active=instance.active, size=2)
-    ]
+    ])
 
     QUERY = {
         "query": {
@@ -82,31 +82,31 @@ for instance in instances:
         }
     }
 
-    print "Search by query:", QUERY, [
+    print ("Search by query:", QUERY, [
         item.to_dict()
         for item in ExampleDoc.search(QUERY)
-    ]
-    print "#" * 120
+    ])
+    print ("#" * 120)
 
 
 for instance in instances:
-    print instance.name, "Old age:", instance.age
+    print (instance.name, "Old age:", instance.age)
     instance.age += 1
-    print instance.name, "New age:", instance.age
+    print (instance.name, "New age:", instance.age)
 
 ExampleDoc.save_all(instances)
 
 for instance in instances:
-    print instance.name, "Saved age is now:", instance.age
+    print (instance.name, "Saved age is now:", instance.age)
 
 for instance in instances:
-    print "{i.name} activation is {i.active}".format(i=instance)
+    print ("{i.name} activation is {i.active}".format(i=instance))
 
 ########################################################################
 
 time.sleep(2)
 
-print "updating turning activations to True"
+print ("updating turning activations to True")
 
 QUERY = {
     "query": {
@@ -118,35 +118,35 @@ QUERY = {
     }
 }
 
-print "for", QUERY
+print ("for", QUERY)
 
 results = ExampleDoc.search(QUERY)
 for res in results:
-    print res
+    print (res)
 
 
 results.update(active=True)
 results.reload()
 for res in results:
-    print "{i.name} activation is {i.active}".format(i=res)
+    print ("{i.name} activation is {i.active}".format(i=res))
 
-print "Will update the names to Jonson"
+print ("Will update the names to Jonson")
 
-# results.update(name="Jonson")
-# results.reload()
-# for res in results:
-#     print "{i.name} activation is {i.active}".format(i=res)
+results.update(name="Jonson")
+results.reload()
+for res in results:
+    print ("{i.name} activation is {i.active}".format(i=res))
 
-# print "Updating using Model.update_all"
-# ExampleDoc.update_all(results, city="Itapopoca")
-# time.sleep(1)
-# results = ExampleDoc.filter(city="Itapopoca")
-# for res in results:
-#     print "{i.name} city is {i.city}".format(i=res)
+print ("Updating using Model.update_all")
+ExampleDoc.update_all(results, city="Itapopoca")
+time.sleep(1)
+results = ExampleDoc.filter(city="Itapopoca")
+for res in results:
+    print ("{i.name} city is {i.city}".format(i=res))
 
-print "All documents"
+print ("All documents")
 for doc in ExampleDoc.all():
-    print doc.to_dict()
+    print (doc.to_dict())
 
 #print "Deleting everything"
 #results.delete()

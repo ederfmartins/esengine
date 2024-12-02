@@ -1,4 +1,7 @@
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 from esengine.bases.field import BaseField
 from esengine.bases.metaclass import ModelMetaclass

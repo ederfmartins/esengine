@@ -37,7 +37,7 @@ setup(
     url='https://github.com/seek-ai/esengine',
     license='MIT',
     author="Catholabs",
-    author_email="catholabs@catho.com",
+    author_email="ederfmartins@gmail.com",
     description='Elasticsearch ODM inspired on MongoEngine',
     long_description=long_description,
     packages=find_packages(),
@@ -47,9 +47,10 @@ setup(
     extras_require={
         "es0": ["elasticsearch<1.0.0"],
         "es1": ["elasticsearch>=1.0.0,<2.0.0"],
-        "es2": ["elasticsearch>=2.0.0,<3.0.0"]
+        "es2": ["elasticsearch>=2.0.0,<3.0.0"],
+        "es8": ["elasticsearch>=8.0.0,<9.0.0"]
     },
-    install_requires=["python-dateutil", "six==1.10.0"],
+    install_requires=["python-dateutil", "six==1.16.0"],
     tests_require=[
         "pytest==2.8.3",
         "pytest-cov==2.2.0",
@@ -69,5 +70,6 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.12',
     ]
 )

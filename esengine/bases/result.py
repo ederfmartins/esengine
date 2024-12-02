@@ -3,6 +3,8 @@ import time
 import elasticsearch.helpers as eh
 from six import text_type
 
+from esengine.bases import ELASTICSEARCH_BASE_VERSION
+
 HITS = 'hits'
 
 
@@ -52,44 +54,76 @@ class ResultSet(object):
     def reload(self, sleep=1):
         time.sleep(sleep)
         self._all_values = []
-        resp = self._es.search(
-            index=self._model._index,
-            doc_type=self._model._doctype,
-            body=self._query,
-            size=self._size or len(self._values)
-        )
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            resp = self._es.search(
+                index=self._model._index,
+                body=self._query,
+                size=self._size or len(self._values)
+            )
+        else:
+            resp = self._es.search(
+                index=self._model._index,
+                doc_type=self._model._doctype,
+                body=self._query,
+                size=self._size or len(self._values)
+            )
         self._hits = self._values = resp.get('hits', {}).pop('hits', [])
         self._meta = resp
         return resp
 
     def update(self, meta=None, **kwargs):
         if kwargs:
-            actions = [
-                {
-                    '_op_type': 'update',
-                    '_index': self._model._index,
-                    '_type': self._model._doctype,
-                    '_id': doc.id,
-                    'doc': kwargs
-                }
-                for doc in self.values
-            ]
+            if ELASTICSEARCH_BASE_VERSION >= 8:
+                actions = [
+                    {
+                        '_op_type': 'update',
+                        '_index': self._model._index,
+                        '_id': doc.id,
+                        'doc': kwargs
+                    }
+                    for doc in self.values
+                ]
+            else:
+                actions = [
+                    {
+                        '_op_type': 'update',
+                        '_index': self._model._index,
+                        '_type': self._model._doctype,
+                        '_id': doc.id,
+                        'doc': kwargs
+                    }
+                    for doc in self.values
+                ]
             return eh.bulk(self._es, actions, **meta if meta else {})
 
     def delete(self, meta=None, **kwargs):
-        actions = (
-            {
-                '_op_type': 'delete',
-                '_index': self._model._index,
-                '_type': self._model._doctype,
-                '_id': doc.id,
-            }
-            for doc in self.values
-        )
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            actions = (
+                {
+                    '_op_type': 'delete',
+                    '_index': self._model._index,
+                    '_id': doc.id,
+                }
+                for doc in self.values
+            )
+        else:
+            actions = (
+                {
+                    '_op_type': 'delete',
+                    '_index': self._model._index,
+                    '_type': self._model._doctype,
+                    '_id': doc.id,
+                }
+                for doc in self.values
+            )
         return eh.bulk(self._es, actions, **meta if meta else {})
 
     def count(self):
-        return min(self._size, self.meta.get('hits', {}).get('total'))
+        hits_total = self.meta.get('hits', {}).get('total')
+        if isinstance(hits_total, dict):
+            return min(self._size, hits_total.get('value', None))
+        else:
+            return min(self._size, hits_total)
 
     def to_dict(self, *args, **kwargs):
         """

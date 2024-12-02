@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 from esengine.embedded_document import EmbeddedDocument  # noqa
 from esengine.document import Document  # noqa

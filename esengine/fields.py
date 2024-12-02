@@ -1,4 +1,5 @@
 # coding: utf-8
+from esengine.bases import ELASTICSEARCH_BASE_VERSION
 from esengine.bases.py3 import *  # noqa
 from dateutil import parser
 from datetime import datetime
@@ -7,6 +8,10 @@ from esengine.bases.field import BaseField
 from esengine.exceptions import ValidationError, FieldTypeMismatch
 from esengine.utils.validation import FieldValidator
 
+
+ELASTICSEARCH_STRING = "string" if ELASTICSEARCH_BASE_VERSION < 6 else "text"
+ES_ANALYZED_VALUE = "analyzed" if ELASTICSEARCH_BASE_VERSION < 5 else True
+ES_STORE_VALUE = "yes" if ELASTICSEARCH_BASE_VERSION < 5 else True
 __all__ = [
     'IntegerField', 'LongField', 'StringField', 'FloatField',
     'DateField', 'BooleanField', 'GeoPointField', 'ArrayField', 'ObjectField'
@@ -25,8 +30,12 @@ class LongField(BaseField):
 
 class StringField(BaseField):
     _type = unicode
-    _default_mapping = {"index": "analyzed", "store": "yes", 'type': 'string'}
+    _default_mapping = {"index": ES_ANALYZED_VALUE, "store": ES_STORE_VALUE, 'type': ELASTICSEARCH_STRING}
 
+
+class KeywordField(BaseField):
+    _type = unicode
+    _default_mapping = {"index": ES_ANALYZED_VALUE, "store": ES_STORE_VALUE, 'type': 'keyword'}
 
 class FloatField(BaseField):
     _type = float

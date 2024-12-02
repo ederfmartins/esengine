@@ -1,4 +1,11 @@
-import collections
+from collections import defaultdict
+
+from esengine.bases import ELASTICSEARCH_BASE_VERSION
+
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 
 class Mapping(object):
@@ -30,16 +37,22 @@ class Mapping(object):
             doc_class: esengine.Document object containing the model to be
             mapped to elasticsearch.
         """
-        m = {
-            doc_class._doctype: {
-                "_all": {"enabled": self.enable_all},
-                "properties": {
-                    field_name: field_instance.mapping
-                    for field_name, field_instance in doc_class._fields.items()
-                    if field_name != "id"
-                }
+        properties = {
+            "_all": {"enabled": self.enable_all},
+            "properties": {
+                field_name: field_instance.mapping
+                for field_name, field_instance in doc_class._fields.items()
+                if field_name != "id"
             }
         }
+        if ELASTICSEARCH_BASE_VERSION >= 6:
+            del properties["_all"]
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            m = properties
+        else:
+            m = {
+                doc_class._doctype: properties
+            }
         return m
 
     def generate(self):
@@ -53,16 +66,33 @@ class Mapping(object):
             es: elasticsearch client intance.
         """
         es = self.document_class.get_es(es)
+
         if not es.indices.exists(index=self.document_class._index):
+            request_body = {
+                "body": {"mappings": self.generate()}
+            }
+            if ELASTICSEARCH_BASE_VERSION >= 6 and ELASTICSEARCH_BASE_VERSION < 8:
+                request_body["params"] = {"include_type_name": "true"}
+            if ELASTICSEARCH_BASE_VERSION >= 2:
+                request_body["body"] = request_body["body"]["mappings"]
             return es.indices.create(
                 index=self.document_class._index,
-                body={"mappings": self.generate()}
+                **request_body
             )
         else:
+            request_body = {
+                "body": {"mappings": self.generate()}
+            }
+            if ELASTICSEARCH_BASE_VERSION < 6:
+                request_body["doc_type"] = self.document_class._doctype
+            if ELASTICSEARCH_BASE_VERSION >= 6 and ELASTICSEARCH_BASE_VERSION < 8:
+                request_body["params"] = {"include_type_name": "true"}
+                request_body["doc_type"] = self.document_class._doctype
+            if ELASTICSEARCH_BASE_VERSION >= 2:
+                request_body["body"] = request_body["body"]["mappings"]
             return es.indices.put_mapping(
-                doc_type=self.document_class._doctype,
                 index=self.document_class._index,
-                body=self.generate()
+                **request_body
             )
 
     def build_configuration(self, models_to_mapping, custom_settings, es=None):
@@ -92,7 +122,7 @@ class Mapping(object):
             if es.indices.exists(index=index):
                 msg = 'Settings are supported only on index creation'
                 raise ValueError(msg)
-        mappings_by_index = collections.defaultdict(dict)
+        mappings_by_index = defaultdict(dict)
         for model in mapped_models:
             mapping = self._generate(model)
             mappings_by_index[model._index].update(mapping)
@@ -121,7 +151,7 @@ class Mapping(object):
 
             es: elasticsearch client intance.
         """
-        if not isinstance(models_to_mapping, collections.Iterable):
+        if not isinstance(models_to_mapping, Iterable):
             raise AttributeError('models_to_mapping must be iterable')
 
         if custom_settings:

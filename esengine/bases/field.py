@@ -2,7 +2,10 @@ from esengine.bases.py3 import *  # noqa
 from esengine.exceptions import RequiredField, InvalidMultiField
 from esengine.exceptions import FieldTypeMismatch, ValidationError
 
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 
 class BaseField(object):

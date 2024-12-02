@@ -1,6 +1,8 @@
 import elasticsearch.helpers as eh
 
 from six import iteritems, with_metaclass
+
+from esengine.bases import ELASTICSEARCH_BASE_VERSION
 from esengine.bases.py3 import *  # noqa
 from esengine.bases.document import BaseDocument
 from esengine.bases.metaclass import ModelMetaclass
@@ -87,12 +89,15 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :return: Es meta data
         """
         doc = self.to_dict()
-        saved_document = self.get_es(es).index(
-            index=self._index,
-            doc_type=self._doctype,
-            id=self.id,  # noqa
-            body=doc
-        )
+        params = {
+            "index": self._index,
+            "doc_type": self._doctype,
+            "id": self.id,  # noqa
+            "body": doc
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del params["doc_type"]
+        saved_document = self.get_es(es).index(**params)
         created = saved_document.get('created')
         if created:
             self.id = saved_document['_id']
@@ -159,13 +164,16 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         if 'script' not in body and 'doc' not in body:
             body = {'doc': body}
 
-        updated_data = cls.get_es(es).update(
-            index=cls._index,
-            doc_type=cls._doctype,
-            id=doc_id,  # noqa
-            body=body,
+        params = {
+            "index": cls._index,
+            "doc_type": cls._doctype,
+            "id": doc_id,  # noqa
+            "body": body,
             **meta
-        )
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del params["doc_type"]
+        updated_data = cls.get_es(es).update(**params)
         return updated_data
 
     def delete(self, es=None):
@@ -178,11 +186,14 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :param es: ES client or None (if implemented a default in Model)
         :return: ES meta data
         """
-        return self.get_es(es).delete(
-            index=self._index,
-            doc_type=self._doctype,
-            id=self.id,  # noqa
-        )
+        params = {
+            "index": self._index,
+            "doc_type": self._doctype,
+            "id": self.id,  # noqa
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del params["doc_type"]
+        return self.get_es(es).delete(**params)
 
     @classmethod
     def create(cls, es=None, **kwargs):
@@ -223,12 +234,15 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :param kwargs: extra key=value to be passed to es client
         :return: True or False
         """
-        return cls.get_es(es).exists(
-            index=cls._index,
-            doc_type=cls._doctype,
-            id=id,
+        params = {
+            "index": cls._index,
+            "doc_type": cls._doctype,
+            "id": id,  # noqa
             **kwargs
-        )
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del params["doc_type"]
+        return cls.get_es(es).exists(**params)
 
     @classmethod
     def get(cls, id, es=None, **kwargs):  # noqa
@@ -243,10 +257,15 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :return: A single Doc object
         """
         es = cls.get_es(es)
-        res = es.get(index=cls._index,
-                     doc_type=cls._doctype,
-                     id=id,
-                     **kwargs)
+        params = {
+            "index": cls._index,
+            "doc_type": cls._doctype,
+            "id": id,  # noqa
+            **kwargs
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del params["doc_type"]
+        res = es.get(**params)
         return cls.from_es(res)
 
     @classmethod
@@ -335,11 +354,13 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
             }
 
         size = len(ids) if ids else size
-        search_args = dict(
-            index=cls._index,
-            doc_type=cls._doctype,
-            body=query
-        )
+        search_args = {
+            "index": cls._index,
+            "doc_type": cls._doctype,
+            "body": query
+        }
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del search_args["doc_type"]
 
         if perform_count:
             return es.count(**search_args)['count']
@@ -393,6 +414,8 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
             body=query,
             **kwargs
         )
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            del search_args["doc_type"]
 
         if perform_count:
             return es.count(**search_args)['count']
@@ -440,16 +463,27 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :param kwargs: Extra params to be passed to streaming_bulk
         :return: ES metadata
         """
-        actions = [
-            {
-                '_op_type': 'index',
-                '_index': cls._index,
-                '_type': cls._doctype,
-                '_id': doc.id,
-                '_source': doc.to_dict()
-            }
-            for doc in docs
-        ]
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            actions = [
+                {
+                    '_op_type': 'index',
+                    '_index': cls._index,
+                    '_id': doc.id,
+                    '_source': doc.to_dict()
+                }
+                for doc in docs
+            ]
+        else:
+            actions = [
+                {
+                    '_op_type': 'index',
+                    '_index': cls._index,
+                    '_type': cls._doctype,
+                    '_id': doc.id,
+                    '_source': doc.to_dict()
+                }
+                for doc in docs
+            ]
         return eh.bulk(cls.get_es(es), actions, **kwargs)
 
     @classmethod
@@ -467,16 +501,27 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :param kwargs: Extra params to be passed to streaming_bulk
         :return: Es Metadata
         """
-        actions = (
-            {
-                '_op_type': 'update',
-                '_index': cls._index,
-                '_type': cls._doctype,
-                '_id': doc.id,
-                'doc': kwargs
-            }
-            for doc in docs
-        )
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            actions = (
+                {
+                    '_op_type': 'update',
+                    '_index': cls._index,
+                    '_id': doc.id,
+                    'doc': kwargs
+                }
+                for doc in docs
+            )
+        else:
+            actions = (
+                {
+                    '_op_type': 'update',
+                    '_index': cls._index,
+                    '_type': cls._doctype,
+                    '_id': doc.id,
+                    'doc': kwargs
+                }
+                for doc in docs
+            )
         return eh.bulk(cls.get_es(es), actions, **meta if meta else {})
 
     @classmethod
@@ -492,15 +537,25 @@ class Document(with_metaclass(ModelMetaclass, BaseDocument)):
         :param kwargs: Extra params to be passed to streaming_bulk
         :return: ES metadata
         """
-        actions = [
-            {
-                '_op_type': 'delete',
-                '_index': cls._index,
-                '_type': cls._doctype,
-                '_id': getattr(doc, 'id', doc),
-            }
-            for doc in docs
-        ]
+        if ELASTICSEARCH_BASE_VERSION >= 8:
+            actions = [
+                {
+                    '_op_type': 'delete',
+                    '_index': cls._index,
+                    '_id': getattr(doc, 'id', doc),
+                }
+                for doc in docs
+            ]
+        else:
+            actions = [
+                {
+                    '_op_type': 'delete',
+                    '_index': cls._index,
+                    '_type': cls._doctype,
+                    '_id': getattr(doc, 'id', doc),
+                }
+                for doc in docs
+            ]
         return eh.bulk(cls.get_es(es), actions, **kwargs)
 
     @classmethod

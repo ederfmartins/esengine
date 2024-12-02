@@ -3,6 +3,7 @@ from esengine import (
     IntegerField, LongField, StringField, FloatField,
     DateField, BooleanField, GeoPointField
 )
+from esengine.fields import ES_ANALYZED_VALUE, ES_STORE_VALUE, ELASTICSEARCH_STRING
 
 
 class BaseDoc(Document):
@@ -51,9 +52,9 @@ def test_mapping():
                 'integerfield': {'type': 'integer'},
                 'longfield': {'type': 'long'},
                 'stringfield': {
-                    "index": "analyzed",
-                    "store": "yes",
-                    'type': 'string'
+                    "index": ES_ANALYZED_VALUE,
+                    "store": ES_STORE_VALUE,
+                    'type': ELASTICSEARCH_STRING
                 }
             }
         }
@@ -119,9 +120,9 @@ def test_configure():
                 'integerfield': {'type': 'integer'},
                 'longfield': {'type': 'long'},
                 'stringfield': {
-                    "index": "analyzed",
-                    "store": "yes",
-                    'type': 'string'
+                    "index": ES_ANALYZED_VALUE,
+                    "store": ES_STORE_VALUE,
+                    'type': ELASTICSEARCH_STRING
                 }
             }
         },

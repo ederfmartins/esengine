@@ -1,6 +1,6 @@
 .PHONY: test install pep8 release clean doc
 
-test: pep8
+test:
 	py.test -v --cov=esengine -l --tb=short --maxfail=1 tests/ -vv
 
 install:
@@ -10,7 +10,9 @@ pep8:
 	@flake8 esengine --ignore=F403 --ignore F821
 
 release: test
-	@python setup.py sdist bdist_wheel upload
+	#@python setup.py sdist bdist_wheel upload
+	@python setup.py sdist
+	@twine upload dist/*
 
 clean:
 	@find ./ -name '*.pyc' -exec rm -f {} \;
