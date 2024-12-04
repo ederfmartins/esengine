@@ -55,6 +55,7 @@ class ResultSet(object):
         time.sleep(sleep)
         self._all_values = []
         if ELASTICSEARCH_BASE_VERSION >= 8:
+            self._query.pop('size', None) # To avoid ValueError: Received multiple values for 'size'
             resp = self._es.search(
                 index=self._model._index,
                 body=self._query,

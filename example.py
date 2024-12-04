@@ -5,7 +5,7 @@ import datetime
 from elasticsearch import Elasticsearch
 from esengine import (
     Document, StringField, IntegerField, BooleanField,
-    FloatField, GeoPointField, DateField
+    FloatField, GeoPointField, DateField, DenseVectorField
 )
 
 
@@ -21,6 +21,7 @@ class ExampleDoc(Document):
     location = GeoPointField(mode="array")
     birthday = DateField(date_format="%Y-%m-%d")
     city = StringField()
+    ml_vec = DenseVectorField(dims=4)
 
 
 ExampleDoc.put_mapping()
@@ -49,7 +50,8 @@ mongo = ExampleDoc(
     weight="10.5",
     location=[0.342, 2.456],
     birthday=datetime.datetime.today(),
-    city="Tunguska"
+    city="Tunguska",
+    ml_vec=[10, 20, 0.5, 0.333]
 )
 mongo.save()
 instances.append(mongo)
@@ -148,5 +150,36 @@ print ("All documents")
 for doc in ExampleDoc.all():
     print (doc.to_dict())
 
+print ("KNN")
+
+QUERY = {
+    "query": {
+        "match_all": {}
+    },
+    "knn": {
+        "field": "ml_vec",
+        "query_vector": [0.1, 0.2, 0.3, 0.4],
+        "k": 1,
+        "num_candidates": 100
+    },
+}
+results = ExampleDoc.search(QUERY)
+for res in results:
+    print (res)
+    print (res.get_query_score(), res.get_query_fields())
+
+
+QUERY = {
+    "knn": {
+        "field": "ml_vec",
+        "query_vector": [0.1, 0.2, 0.3, 0.4],
+        "k": 1,
+        "num_candidates": 100
+    }
+}
+results = ExampleDoc.search(QUERY)
+for res in results:
+    print (res)
+    print (res.get_query_score(), res.get_query_fields())
 #print "Deleting everything"
 #results.delete()

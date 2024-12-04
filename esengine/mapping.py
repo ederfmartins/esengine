@@ -73,8 +73,6 @@ class Mapping(object):
             }
             if ELASTICSEARCH_BASE_VERSION >= 6 and ELASTICSEARCH_BASE_VERSION < 8:
                 request_body["params"] = {"include_type_name": "true"}
-            if ELASTICSEARCH_BASE_VERSION >= 2:
-                request_body["body"] = request_body["body"]["mappings"]
             return es.indices.create(
                 index=self.document_class._index,
                 **request_body

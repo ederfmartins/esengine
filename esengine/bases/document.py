@@ -122,3 +122,11 @@ class BaseDocument(object):
                 val = validator(self)
                 if val:
                     raise ValidationError("Invalid: %s" % val)
+
+    def get_query_score(self):
+        if not hasattr(self, "_score"):
+            raise AttributeError("Document is not a query result")
+        return self._score  # noqa
+
+    def get_query_fields(self):
+        return self._query_fields

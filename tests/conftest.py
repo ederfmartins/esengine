@@ -2,6 +2,7 @@
 import pytest
 import elasticsearch.helpers as eh_original
 from esengine import Document
+from esengine.bases import ELASTICSEARCH_BASE_VERSION
 from esengine.fields import IntegerField, StringField, FloatField
 
 DOUBLE_ID_FIELD = "double_id"
@@ -16,7 +17,8 @@ class ES(object):
 
     def index(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         assert kwargs['id'] == self.test_id
         assert 'body' in kwargs
         kwargs['created'] = True
@@ -25,7 +27,8 @@ class ES(object):
 
     def get(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         assert kwargs['id'] == self.test_id
         return {
             '_source': {
@@ -36,7 +39,8 @@ class ES(object):
 
     def search(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         docs = []
         for _id in self.test_ids:
             doc = {
@@ -61,7 +65,8 @@ class ES_fields(object):
 
     def index(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         assert kwargs['id'] == self.test_id
         assert 'body' in kwargs
         kwargs['created'] = True
@@ -70,7 +75,8 @@ class ES_fields(object):
 
     def get(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         assert kwargs['id'] == self.test_id
         return {
             '_source': {
@@ -81,7 +87,8 @@ class ES_fields(object):
 
     def search(self, *args, **kwargs):
         assert kwargs['index'] == _INDEX
-        assert kwargs['doc_type'] == _DOC_TYPE
+        if 'doc_type' in kwargs:
+            assert kwargs['doc_type'] == _DOC_TYPE
         docs = []
         for _id in self.test_ids:
             doc = {
@@ -177,7 +184,8 @@ def eh():
         for action in actions:
             assert action['_op_type'] in ['index', 'update', 'delete']
             assert action['_index'] == _INDEX
-            assert action['_type'] == _DOC_TYPE
+            if 'doc_type' in action:
+                assert action['_type'] == _DOC_TYPE
 
     eh_original.bulk = bulk
     return eh_original

@@ -1,4 +1,6 @@
 # coding: utf-8
+from collections.abc import Iterable
+
 from esengine.bases import ELASTICSEARCH_BASE_VERSION
 from esengine.bases.py3 import *  # noqa
 from dateutil import parser
@@ -13,8 +15,8 @@ ELASTICSEARCH_STRING = "string" if ELASTICSEARCH_BASE_VERSION < 6 else "text"
 ES_ANALYZED_VALUE = "analyzed" if ELASTICSEARCH_BASE_VERSION < 5 else True
 ES_STORE_VALUE = "yes" if ELASTICSEARCH_BASE_VERSION < 5 else True
 __all__ = [
-    'IntegerField', 'LongField', 'StringField', 'FloatField',
-    'DateField', 'BooleanField', 'GeoPointField', 'ArrayField', 'ObjectField'
+    'IntegerField', 'LongField', 'StringField', 'FloatField', 'KeywordField',
+    'DateField', 'BooleanField', 'GeoPointField', 'ArrayField', 'ObjectField', 'DenseVectorField'
 ]
 
 
@@ -37,6 +39,7 @@ class KeywordField(BaseField):
     _type = unicode
     _default_mapping = {"index": ES_ANALYZED_VALUE, "store": ES_STORE_VALUE, 'type': 'keyword'}
 
+
 class FloatField(BaseField):
     _type = float
     _default_mapping = {'type': 'float'}
@@ -46,6 +49,50 @@ class BooleanField(BaseField):
     _type = bool
     _default_mapping = {'type': 'boolean'}
 
+
+class DenseVectorDimValidator(FieldValidator):
+    def validate_value(self, field, value):
+        if value:
+            dims = field.mapping["dims"]
+            if dims != len(value):
+                raise ValidationError(
+                    f'dense_vector dims missmatch on {field._field_name} with {dims} != {len(value)}'
+                )
+
+
+class DenseVectorField(BaseField):
+    _type = float
+    _default_mapping = {
+        'type': 'dense_vector', "dims": 128, "similarity": "cosine", "index": True, "element_type": "float"
+    }
+
+    def __init__(self, dims, *args, **kwargs):
+        mapping = kwargs.pop('mapping', {})
+        mapping['dims'] = dims
+        kwargs['mapping'] = mapping
+        super(DenseVectorField, self).__init__(*args, **kwargs)
+        self._validators.append(DenseVectorDimValidator())
+
+    def from_dict(self, serialized):
+        """
+        Transform data read from E.S to Python Object
+        :param serialized: Result from E.S (string)
+        :return: Instance or Instances of self._type
+        """
+        if serialized is not None:
+            return [
+                self._type(x)
+                for x in serialized
+            ]
+        return self._default
+
+    def validate_field_type(self, value):
+        if value is not None:
+            if not isinstance(value, list):
+                raise FieldTypeMismatch(self._field_name, list, value.__class__)
+            if len(value):
+                if not isinstance(value[0], self._type):
+                    raise FieldTypeMismatch(self._field_name, self._type, value.__class__)
 
 class ObjectField(BaseField):
     """

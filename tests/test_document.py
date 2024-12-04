@@ -22,7 +22,7 @@ def test_doc_search(Doc, QUERY, MockES):
 def test_doc_search_with_script_fields(Doc, QUERY_SCRIPT_FIELDS, MockESf, FIELD_NAME):
     docs = Doc.search(QUERY_SCRIPT_FIELDS, es=MockESf())
     for doc in docs:
-        query_fields = doc._query_fields
+        query_fields = doc.get_query_fields()
         assert FIELD_NAME in query_fields
         assert query_fields[FIELD_NAME] in MockESf.double_ids
 
